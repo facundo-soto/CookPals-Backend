@@ -3,7 +3,9 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import recipesRoutes from './routes/recipesRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
-import { PORT, FRONTEND_URL } from './config/config.js';
+import { FRONTEND_URL } from './config/config.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 
@@ -18,6 +20,10 @@ app.use('/profile', profileRoutes);
 
 app.use('/recipes', recipesRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+app.get('/', (req, res) =>{
+    res.send("Welcome to the API")
+})
+
+app.listen(process.env.PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${process.env.PORT}`);
 });
