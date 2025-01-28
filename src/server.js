@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: "*", // Reemplaza con el dominio de tu frontend
+    origin: FRONTEND_URL, // Reemplaza con el dominio de tu frontend
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
     credentials: true // Si necesitas enviar cookies o encabezados personalizados
 }));
