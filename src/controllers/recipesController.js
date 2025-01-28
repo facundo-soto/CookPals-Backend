@@ -98,16 +98,21 @@ export const getSavedRecipes = async (req, res) => {
     try {
         const user = await db.collection('users').doc(uid).get();
         const savedRecipesIds = user.data().savedRecipes;
-        const savedRecipes = [];
-        const recipePromises = savedRecipesIds.map(async (id) => {
-            const recipe = (await db.collection('recipes').doc(id).get()).data();
-            const user = await db.collection('users').doc(recipe.author).get();
-            recipe.author = user.data().name;
-            recipe.id = id;
-            savedRecipes.push(recipe);
-        });
-        await Promise.all(recipePromises);
-        res.status(200).send(savedRecipes);
+        if (savedRecipesIds?.length > 0) {
+            const savedRecipes = [];
+            const recipePromises = savedRecipesIds.map(async (id) => {
+                const recipe = (await db.collection('recipes').doc(id).get()).data();
+                const user = await db.collection('users').doc(recipe.author).get();
+                recipe.author = user.data().name;
+                recipe.id = id;
+                savedRecipes.push(recipe);
+            });
+            await Promise.all(recipePromises);
+            res.status(200).send(savedRecipes);
+        }
+        else{
+            res.status(200).send([]);
+        }
     } catch (error) {
         console.error(error);
         res.status(500).send({ message: 'Error getting saved recipes', error: error.message });

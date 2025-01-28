@@ -3,5 +3,6 @@ dotenv.config();
 
 export const {
     PORT = 0,
-    IMGUR_CLIENT_ID = ""
+    IMGUR_CLIENT_ID = "",
+    FIREBASE_CONFIG = "{}"
 } = process.env;
