@@ -8,7 +8,7 @@ import { PORT, FRONTEND_URL } from './config/config.js';
 const app = express();
 
 app.use(cors({
-    origin: FRONTEND_URL, // Reemplaza con el dominio de tu frontend
+    origin: "*", // Reemplaza con el dominio de tu frontend
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
     credentials: true // Si necesitas enviar cookies o encabezados personalizados
 }));
