@@ -78,9 +78,10 @@ export const getRecipeById = async (req, res) => {
         recipe.calification = recipe.comments.length ? recipe.calification / recipe.comments.length : 0;
 
         const user = await db.collection('users').doc(recipe.author).get();
+        const userData = user.data();
         recipe.isAuthor = recipe.author == userId;
-        recipe.isSaved = user.data().savedRecipes.includes(id);
-        recipe.authorName = user.data().name;
+        recipe.isSaved = userData.savedRecipes?.includes(id) ?? false;
+        recipe.authorName = userData.name;
         console.log(recipe);
         res.status(200).send(recipe);
     } catch (error) {
