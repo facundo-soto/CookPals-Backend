@@ -4,11 +4,21 @@ import { db } from "../config/db.js";
 import { Stream } from "stream";
 
 
-const formatRecipes = async (recipes) => {
+const formatRecipes = async (snapshotRecipes, userId) => {
     const formattedRecipes = [];
-    const recipePromises = recipes.map(async (recipe) => {
-        const user = await db.collection('users').doc(recipe.author).get();
-        recipe.author = user.data().name;
+    const recipePromises = snapshotRecipes.docs.map(async (doc) => {
+        const recipe = doc.data();
+
+        const author = await db.collection('users').doc(recipe.author).get();
+        const authorData = author.data();
+        recipe.author = authorData.name;
+        
+        recipe.id = doc.id;
+
+        const user = await db.collection('users').doc(userId).get();
+        const userData = user.data();
+        recipe.isSaved = userData.savedRecipes?.includes(recipe.id);
+
         formattedRecipes.push(recipe);
     });
 
@@ -17,18 +27,13 @@ const formatRecipes = async (recipes) => {
 }
 
 export const getRecipes = async (req, res) => {
+    const { uid } = req.query;
     try {
-        const recipes = [];
-        const snapshot = await db.collection('recipes').get();
-        const recipePromises = snapshot.docs.map(async (doc) => {
-            const recipe = doc.data();
-            const user = await db.collection('users').doc(recipe.author).get();
-            recipe.author = user.data().name;
-            recipe.id = doc.id;
-            recipes.push(recipe);
-        });
-        await Promise.all(recipePromises);
-
+        const recipesSnapshot = await db.collection('recipes').get();
+        const recipes = await formatRecipes(recipesSnapshot, uid);
+        
+        console.log(recipes);
+        
         res.status(200).send(recipes);
     } catch (error) {
         console.error(error);
@@ -44,17 +49,9 @@ export const getUserRecipes = async (req, res) => {
     }
 
     try {
-        const recipes = [];
-        const snapshot = await db.collection('recipes').where('author', '==', uid).get();
-        const recipePromises = snapshot.docs.map(async (doc) => {
-            const recipe = doc.data();
-            const user = await db.collection('users').doc(recipe.author).get();
-            recipe.id = doc.id;
-            recipe.author = user.data().name;
-            recipes.push(recipe);
-        });
+        const recipesSnapshot = await db.collection('recipes').where('author', '==', uid).get();
+        const recipes = await formatRecipes(recipesSnapshot, uid);
 
-        await Promise.all(recipePromises);
         res.status(200).send(recipes);
     } catch (error) {
         console.error(error);
@@ -100,16 +97,16 @@ export const getSavedRecipes = async (req, res) => {
         const user = await db.collection('users').doc(uid).get();
         const savedRecipesIds = user.data().savedRecipes;
         if (savedRecipesIds?.length > 0) {
-            const savedRecipes = [];
-            const recipePromises = savedRecipesIds.map(async (id) => {
-                const recipe = (await db.collection('recipes').doc(id).get()).data();
-                const user = await db.collection('users').doc(recipe.author).get();
-                recipe.author = user.data().name;
-                recipe.id = id;
-                savedRecipes.push(recipe);
+            
+            const recipesPromises = savedRecipesIds.map(async (id) => {
+                return await db.collection('recipes').doc(id).get();
             });
-            await Promise.all(recipePromises);
-            res.status(200).send(savedRecipes);
+            
+            const snapshotRecipes = await Promise.all(recipesPromises);
+            
+            const recipes = await formatRecipes({ docs: snapshotRecipes }, uid);
+
+            res.status(200).send(recipes);
         }
         else{
             res.status(200).send([]);
