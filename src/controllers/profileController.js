@@ -12,7 +12,7 @@ export const updateUsername = async (req, res) => {
 
     try {
         // Actualizamos el documento del usuario en la colección "users"
-        await db.collection('users').doc(uid).set({ name: newName }, { merge: true }); // { merge: true } para no sobreescribir campos existentes
+        await db.collection('users').doc(uid).update({ name: newName }); // Usamos update para no eliminar campos vacíos
         return res.status(200).json({ message: 'Nombre de usuario actualizado exitosamente.' });
     } catch (error) {
         console.error('Error al actualizar el nombre:', error);

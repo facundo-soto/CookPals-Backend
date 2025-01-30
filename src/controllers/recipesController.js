@@ -1,6 +1,7 @@
 import axios from "axios";
 import FormData from "form-data";
 import { db } from "../config/db.js";
+import { SERVER_URL } from "../config/config.js";
 import { Stream } from "stream";
 
 
@@ -74,11 +75,14 @@ export const getRecipeById = async (req, res) => {
         }));
         recipe.calification = recipe.comments.length ? recipe.calification / recipe.comments.length : 0;
 
-        const user = await db.collection('users').doc(recipe.author).get();
-        const userData = user.data();
+        const author = await db.collection('users').doc(recipe.author).get();
+        const authorData = author.data();
         recipe.isAuthor = recipe.author == userId;
+        recipe.authorName = authorData.name;
+
+        const user = await db.collection('users').doc(userId).get();
+        const userData = user.data();
         recipe.isSaved = userData.savedRecipes?.includes(id) ?? false;
-        recipe.authorName = userData.name;
         console.log(recipe);
         res.status(200).send(recipe);
     } catch (error) {
@@ -191,7 +195,7 @@ export const submitRecipe = async (req, res) => {
             knownLength: image.size
         });
 
-        const imageResponse = await axios.post('http://localhost:5000/profile/upload-image', imageData, {
+        const imageResponse = await axios.post(`${SERVER_URL}/profile/upload-image`, imageData, {
             headers: {
                 ...imageData.getHeaders()
             }
