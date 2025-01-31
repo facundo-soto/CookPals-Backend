@@ -3,14 +3,14 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import recipesRoutes from './routes/recipesRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
-import { FRONTEND_URL } from './config/config.js';
+import { FRONTEND_URL, SERVER_URL } from './config/config.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
 
 app.use(cors({
-    origin: FRONTEND_URL, // Reemplaza con el dominio de tu frontend
+    origin: [FRONTEND_URL, SERVER_URL], // Reemplaza con el dominio de tu frontend y la URL del servidor
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
     credentials: true // Si necesitas enviar cookies o encabezados personalizados
 }));
