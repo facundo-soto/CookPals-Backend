@@ -29,6 +29,7 @@ const formatRecipes = async (snapshotRecipes, userId) => {
     });
 
     await Promise.all(recipePromises);
+    formattedRecipes.sort((a, b) => a.id.localeCompare(b.id));
     return formattedRecipes;
 }
 
@@ -37,7 +38,6 @@ export const getRecipes = async (req, res) => {
     try {
         const recipesSnapshot = await db.collection('recipes').get();
         const recipes = await formatRecipes(recipesSnapshot, uid);
-        recipes.sort((a, b) => a.id.localeCompare(b.id));
         
         res.status(200).send(recipes);
     } catch (error) {
