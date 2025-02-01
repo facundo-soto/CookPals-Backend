@@ -16,9 +16,14 @@ const formatRecipes = async (snapshotRecipes, userId) => {
         
         recipe.id = doc.id;
 
-        const user = await db.collection('users').doc(userId).get();
-        const userData = user.data();
-        recipe.isSaved = userData.savedRecipes?.includes(recipe.id);
+        if(userId){
+            const user = await db.collection('users').doc(userId).get();
+            const userData = user.data();
+            recipe.isSaved = userData.savedRecipes?.includes(recipe.id);
+        }
+        else{
+            recipe.isSaved = false;
+        }
 
         formattedRecipes.push(recipe);
     });
@@ -32,8 +37,7 @@ export const getRecipes = async (req, res) => {
     try {
         const recipesSnapshot = await db.collection('recipes').get();
         const recipes = await formatRecipes(recipesSnapshot, uid);
-        
-        console.log(recipes);
+        recipes.sort((a, b) => a.id.localeCompare(b.id));
         
         res.status(200).send(recipes);
     } catch (error) {
@@ -41,6 +45,20 @@ export const getRecipes = async (req, res) => {
         res.status(500).send({ message: 'Error getting recipes', error: error.message });
     }
 };
+
+export const getBestRecipes = async (req, res) =>{
+    const { uid } = req.query;
+    try {
+        const recipesSnapshot = await db.collection('recipes').orderBy('calification', 'desc').limit(3).get();
+        const recipes = await formatRecipes(recipesSnapshot, uid);
+        recipes.sort((a, b) => b.calification - a.calification);
+
+        res.status(200).send(recipes);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Error getting recipes', error: error.message });
+    }
+}
 
 export const getUserRecipes = async (req, res) => {
     const { uid } = req.query; // Extraemos el uid del query de la petición
