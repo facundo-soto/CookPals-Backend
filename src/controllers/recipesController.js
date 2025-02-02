@@ -238,7 +238,7 @@ export const submitRecipe = async (req, res) => {
     }
 };
 
-export const submitComment = async (req, res) => {
+export const commentController = async (req, res) => {
     const comment = JSON.parse(req.body.comment);
     const recipeId = req.body.recipeId;
 
@@ -257,7 +257,18 @@ export const submitComment = async (req, res) => {
         }
 
         const recipeData = recipeDoc.data();
-        recipeData.comments.push(comment);
+        const existingComment = recipeData.comments.findIndex(com => com.userId === comment.userId);
+        if(comment.delete){
+            recipeData.comments.splice(existingComment, 1);
+        }
+        else{
+            if (existingComment !== -1) {
+                recipeData.comments[existingComment] = comment;
+            } else {
+                recipeData.comments.push(comment);
+            }
+        }
+        
         recipeData.calification = 0;
         recipeData.comments.map((com) => {
             recipeData.calification += com.stars;

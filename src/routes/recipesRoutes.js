@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { upload } from '../config/multer.js';
-import { getRecipes, getBestRecipes, getRecipeById, getUserRecipes, getSavedRecipes, saveRecipe, unsaveRecipe, submitRecipe, submitComment } from '../controllers/recipesController.js';
+import { getRecipes, getBestRecipes, getRecipeById, getUserRecipes, getSavedRecipes, saveRecipe, unsaveRecipe, submitRecipe, commentController } from '../controllers/recipesController.js';
 
 router.get('/get-recipes', getRecipes);
 router.get('/get-best-recipes', getBestRecipes)
@@ -11,6 +11,6 @@ router.get('/get-saved-recipes', getSavedRecipes);
 router.post('/save-recipe', saveRecipe);
 router.post('/unsave-recipe', unsaveRecipe);
 router.post('/submit-recipe', upload.single('image'), submitRecipe);
-router.post('/submit-comment', upload.none(), submitComment);
+router.post('/comment-controller', upload.none(), commentController);
 
 export default router;
