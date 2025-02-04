@@ -13,15 +13,15 @@ const formatRecipes = async (snapshotRecipes, userId) => {
         const author = await db.collection('users').doc(recipe.author).get();
         const authorData = author.data();
         recipe.author = authorData.name;
-        
+
         recipe.id = doc.id;
 
-        if(userId){
+        if (userId) {
             const user = await db.collection('users').doc(userId).get();
             const userData = user.data();
             recipe.isSaved = userData.savedRecipes?.includes(recipe.id);
         }
-        else{
+        else {
             recipe.isSaved = false;
         }
 
@@ -38,7 +38,7 @@ export const getRecipes = async (req, res) => {
     try {
         const recipesSnapshot = await db.collection('recipes').get();
         const recipes = await formatRecipes(recipesSnapshot, uid);
-        
+
         res.status(200).send(recipes);
     } catch (error) {
         console.error(error);
@@ -46,7 +46,7 @@ export const getRecipes = async (req, res) => {
     }
 };
 
-export const getBestRecipes = async (req, res) =>{
+export const getBestRecipes = async (req, res) => {
     const { uid } = req.query;
     try {
         const recipesSnapshot = await db.collection('recipes').orderBy('calification', 'desc').limit(3).get();
@@ -119,18 +119,18 @@ export const getSavedRecipes = async (req, res) => {
         const user = await db.collection('users').doc(uid).get();
         const savedRecipesIds = user.data().savedRecipes;
         if (savedRecipesIds?.length > 0) {
-            
+
             const recipesPromises = savedRecipesIds.map(async (id) => {
                 return await db.collection('recipes').doc(id).get();
             });
-            
+
             const snapshotRecipes = await Promise.all(recipesPromises);
-            
+
             const recipes = await formatRecipes({ docs: snapshotRecipes }, uid);
 
             res.status(200).send(recipes);
         }
-        else{
+        else {
             res.status(200).send([]);
         }
     } catch (error) {
@@ -228,8 +228,9 @@ export const submitRecipe = async (req, res) => {
             comments: [],
         };
 
-        await db.collection('recipes').add(recipeData);
-
+        const newRecipeRef = await db.collection('recipes').add(recipeData);
+        const newRecipeId = newRecipeRef.id;
+        recipeData.id = newRecipeId;
         // Your logic to handle the recipe submission
         res.status(200).send({ message: 'Recipe submitted successfully', recipe: recipeData });
     } catch (error) {
@@ -258,17 +259,17 @@ export const commentController = async (req, res) => {
 
         const recipeData = recipeDoc.data();
         const existingComment = recipeData.comments.findIndex(com => com.userId === comment.userId);
-        if(comment.delete){
+        if (comment.delete) {
             recipeData.comments.splice(existingComment, 1);
         }
-        else{
+        else {
             if (existingComment !== -1) {
                 recipeData.comments[existingComment] = comment;
             } else {
                 recipeData.comments.push(comment);
             }
         }
-        
+
         recipeData.calification = 0;
         recipeData.comments.map((com) => {
             recipeData.calification += com.stars;
@@ -284,3 +285,79 @@ export const commentController = async (req, res) => {
     }
 
 };
+
+export const editRecipe = async (req, res) => {
+    const recipe = JSON.parse(req.body.recipe); // Extraemos los datos de la receta del body de la petición
+    const uid = req.body.uid; // Extraemos el uid del usuario del body de la petición
+    const image = req.file ?? null; // Extraemos la imagen de la receta del body de la petición
+    try {
+        if (image) {
+            const imageData = new FormData();
+            const bufferStream = new Stream.PassThrough();
+            bufferStream.end(image.buffer);
+            imageData.append('image', bufferStream, {
+                filename: image.originalname,
+                contentType: image.mimetype,
+                knownLength: image.size
+            });
+
+            const imageResponse = await axios.post(`${SERVER_URL}/profile/upload-image`, imageData, {
+                headers: {
+                    ...imageData.getHeaders()
+                }
+            });
+
+            recipe.image = imageResponse.data.link;
+        }
+        const recipeData = {
+            ...recipe,
+            author: uid,
+            calification: 0,
+            comments: [],
+        };
+
+        const recipeRef = db.collection('recipes').doc(recipe.id);
+        await recipeRef.update(recipeData);
+
+        res.status(200).json({ message: 'Receta editada exitosamente.', recipe: recipeData });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error subiendo la receta', error: error.message });
+    }
+}
+
+export const deleteRecipe = async (req, res) =>{
+    const { recipeId, userId } = req.body;
+
+    if (!recipeId || !userId) {
+        return res.status(400).json({ message: 'Faltan parámetros.' });
+    }
+
+    try {
+
+        const recipeRef = db.collection('recipes').doc(recipeId);
+        const recipeDoc = await recipeRef.get();
+
+        if (!recipeDoc.exists || recipeDoc.data().author !== userId) {
+            console.log("UserId ", userId);
+            console.log("Author ", recipeDoc.data().author);
+            
+            return res.status(500).json({ message: 'Error al eliminar la receta.' });
+        }
+
+        const usersSnapshot = await db.collection('users').where('savedRecipes', 'array-contains', recipeId).get();
+        const userUpdatePromises = usersSnapshot.docs.map(async (userDoc) => {
+            const userData = userDoc.data();
+            userData.savedRecipes = userData.savedRecipes.filter(id => id !== recipeId);
+            await db.collection('users').doc(userDoc.id).update({ savedRecipes: userData.savedRecipes });
+        });
+        await Promise.all(userUpdatePromises);
+
+        await recipeRef.delete();
+
+        res.status(200).json({ message: 'Receta eliminada exitosamente.' });
+    } catch (error) {
+        console.error('Error al eliminar la receta:', error);
+        res.status(500).json({ message: 'Error interno del servidor.', error: error.message });
+    }
+}
